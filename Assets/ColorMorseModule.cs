@@ -6,6 +6,7 @@ using System.Linq;
 using KModkit;
 using UnityEngine;
 using Rnd = UnityEngine.Random;
+using System.Text.RegularExpressions;
 
 public class ColorMorseModule : MonoBehaviour
 {
@@ -13,6 +14,7 @@ public class ColorMorseModule : MonoBehaviour
     public KMBombModule BombModule;
     public KMAudio Audio;
     public KMRuleSeedable RuleSeedable;
+    public KMColorblindMode ColorblindMode;
 
     public MeshRenderer[] IndicatorMeshes;
     public Material[] ColorMaterials;
@@ -21,6 +23,7 @@ public class ColorMorseModule : MonoBehaviour
     public TextMesh[] Labels;
     public KMSelectable[] Buttons;
     public TextMesh SolutionScreenText;
+    public TextMesh[] ColorblindTexts;
 
     private int[] Colors;
     private int[] Numbers;
@@ -41,6 +44,7 @@ public class ColorMorseModule : MonoBehaviour
     private static int _moduleIdCounter = 1;
     private int _moduleId;
     private bool _isSolved;
+    private bool _colorblind;
 
     private const string SYMBOLS = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
     private static readonly string[] MORSE_SYMBOLS = {
@@ -518,6 +522,15 @@ public class ColorMorseModule : MonoBehaviour
     void Activate()
     {
         flashingEnabled = true;
+        _colorblind = ColorblindMode.ColorblindModeActive;
+        if (_colorblind)
+            ActivateColorblindMode();
+    }
+
+    private void ActivateColorblindMode()
+    {
+        for (var i = 0; i < 3; i++)
+            ColorblindTexts[i].gameObject.SetActive(true);
     }
 
     private KMSelectable.OnInteractHandler HandlePress(int button)
@@ -556,7 +569,10 @@ public class ColorMorseModule : MonoBehaviour
                     Debug.LogFormat("[Color Morse #{0}] Full solution submitted.", _moduleId);
                     flashingEnabled = false;
                     for (int i = 0; i < ledCount; i++)
+                    {
                         IndicatorMeshes[i].sharedMaterial = BlackMaterial;
+                        ColorblindTexts[i].text = "";
+                    }
                     SolutionScreenText.text = Solution.Replace('.', '•');
                     return false;
                 }
@@ -585,6 +601,7 @@ public class ColorMorseModule : MonoBehaviour
                 for (int i = 0; i < ledCount; i++)
                 {
                     IndicatorMeshes[i].sharedMaterial = Flashes[i][Pointers[i]] ? ColorMaterials[Colors[i]] : BlackMaterial;
+                    ColorblindTexts[i].text = Flashes[i][Pointers[i]] ? colorNames[Colors[i]].Substring(0, 1) : "";
                     Pointers[i] = (Pointers[i] + 1) % Flashes[i].Length;
                 }
                 timer = DOT_LENGTH;
@@ -644,11 +661,18 @@ public class ColorMorseModule : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = "!{0} transmit ....- --...";
+    private readonly string TwitchHelpMessage = "!{0} transmit ....- --... | !{0} colorblind";
 #pragma warning restore 414
 
     private IEnumerator ProcessTwitchCommand(string command)
     {
+        if (Regex.IsMatch(command, @"^\s*(cb|colorblind)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            yield return null;
+            ActivateColorblindMode();
+            yield break;
+        }
+
         var commands = command.ToLowerInvariant().Trim().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
         if (commands.Length < 2 || (commands[0] != "transmit" && commands[0] != "submit" && commands[0] != "trans" && commands[0] != "tx" && commands[0] != "xmit"))
