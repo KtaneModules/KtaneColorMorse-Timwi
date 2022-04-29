@@ -523,14 +523,13 @@ public class ColorMorseModule : MonoBehaviour
     {
         flashingEnabled = true;
         _colorblind = ColorblindMode.ColorblindModeActive;
-        if (_colorblind)
-            ActivateColorblindMode();
+        SetColorblindMode();
     }
 
-    private void ActivateColorblindMode()
+    private void SetColorblindMode()
     {
         for (var i = 0; i < 3; i++)
-            ColorblindTexts[i].gameObject.SetActive(true);
+            ColorblindTexts[i].gameObject.SetActive(_colorblind);
     }
 
     private KMSelectable.OnInteractHandler HandlePress(int button)
@@ -669,7 +668,8 @@ public class ColorMorseModule : MonoBehaviour
         if (Regex.IsMatch(command, @"^\s*(cb|colorblind)\s*$", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
         {
             yield return null;
-            ActivateColorblindMode();
+            _colorblind = !_colorblind;
+            SetColorblindMode();
             yield break;
         }
 
